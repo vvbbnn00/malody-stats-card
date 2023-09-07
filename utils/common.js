@@ -19,7 +19,7 @@ async function getOnlinePicture(url) {
     const sha256Hash = crypto.createHash('sha256');
     sha256Hash.update(url);
     const urlSha256 = sha256Hash.digest('hex');
-    const filename = path.join(CACHE_PATH, urlSha256 + ".jpg");
+    const filename = path.join(CACHE_PATH, urlSha256 + ".dat");
     // First 8 bytes is cache timestamp
     let file;
     try {
@@ -30,25 +30,44 @@ async function getOnlinePicture(url) {
     let cached = false;
     if (file.length > 8) {
         const timestamp = file.slice(0, 8).readBigInt64BE();
-        // TODO
-        console.log(Number(timestamp));
         if (Date.now() - Number(timestamp) < CACHE_TIME) {
             cached = true;
         }
     }
     // Judge if cached
     if (!cached) {
-        const response = await fetch(url, {
-            method: "GET",
-            // agent
-        });
-        const buffer = await response.buffer();
-        fs.writeFileSync(filename, Buffer.concat([Buffer.from(BigInt(Date.now()).toString(16), 'hex'), buffer]));
-        return buffer;
+        try {
+            const response = await fetch(url, {
+                method: "GET",
+                // agent
+            });
+            if (response.status !== 200) {
+                return null;
+            }
+            const buffer = await response.buffer();
+            const timestampBuffer = Buffer.alloc(8);
+            timestampBuffer.writeBigInt64BE(BigInt(Date.now()));
+            fs.writeFileSync(filename, Buffer.concat([timestampBuffer, buffer]));
+            return buffer;
+        } catch (e) {
+            console.log(e);
+            return null;
+        }
     }
 
     // Return cached file
     return file.slice(8);
 }
 
-getOnlinePicture("http://cdn1.machart.top/avatar/178813")
+function buffer2Base64(data) {
+    if (!data) return null;
+    const buffer = Buffer.from(data);
+    return "data:image/png;base64," + buffer.toString('base64');
+}
+
+// getOnlinePicture("http://cdn1.machart.top/avatar/178813")
+
+module.exports = {
+    getOnlinePicture,
+    buffer2Base64
+}
