@@ -6,10 +6,7 @@ process.env = Object.assign(process.env, config.parsed);
 module.exports = {
     DB_PATH: 'database/malody.db',
     CACHE_TIME: 1000 * 60 * 60 * 2,
-    PROXY: {
-        host: '127.0.0.1',
-        port: 7890,
-    },
+    PROXY: null,
     MALODY: {
         uid: process.env.uid,
         username: process.env.username,

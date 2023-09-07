@@ -8,7 +8,7 @@ const LOGIN_URL = "https://m.mugzone.net/cgi/login";
 const CHECK_URL = "https://m.mugzone.net/cgi/check";
 const PROFILE_URL = "https://m.mugzone.net/cgi/profile_detail"; // ?lang=1&to_uid=178813&t=1693664971&key=x&uid=178813
 
-const agent = tunnel.httpsOverHttp({
+const agent = PROXY && tunnel.httpsOverHttp({
     proxy: PROXY,
 });
 

@@ -11,7 +11,7 @@ if (!fs.existsSync(CACHE_PATH)) {
     fs.mkdirSync(CACHE_PATH);
 }
 
-const agent = tunnel.httpsOverHttp({
+const agent = PROXY && tunnel.httpsOverHttp({
     proxy: PROXY,
 });
 
@@ -39,7 +39,7 @@ async function getOnlinePicture(url) {
         try {
             const response = await fetch(url, {
                 method: "GET",
-                // agent
+                agent
             });
             if (response.status !== 200) {
                 return null;
