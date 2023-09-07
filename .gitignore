@@ -1,0 +1,5 @@
+database/*.db
+node_modules/
+.idea/
+cache/
+.env
