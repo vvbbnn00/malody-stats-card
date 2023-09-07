@@ -4,7 +4,7 @@ node_modules
 .gitignore
 .git
 .idea
-README.md
+README_cn.md
 Dockerfile
 docker-compose.yaml
 database
