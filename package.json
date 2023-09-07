@@ -11,7 +11,7 @@
     "express": "~4.18.2",
     "morgan": "~1.9.1",
     "nedb": "^1.8.0",
-    "node-fetch-with-proxy": "^0.1.6",
+    "node-fetch": "^3.3.2",
     "tunnel": "^0.0.6"
   }
 }

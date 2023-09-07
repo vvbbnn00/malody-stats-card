@@ -1,4 +1,7 @@
-const fetch = require('node-fetch-with-proxy');
+let fetch;
+(async () => {
+    fetch = (await import('node-fetch')).default;
+})();
 const tunnel = require('tunnel');
 const {PROXY, CACHE_TIME} = require('../global.config');
 const fs = require('fs');

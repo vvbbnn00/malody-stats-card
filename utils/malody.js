@@ -1,4 +1,7 @@
-const fetch = require('node-fetch-with-proxy');
+let fetch;
+(async () => {
+    fetch = (await import('node-fetch')).default;
+})();
 const tunnel = require('tunnel');
 const crypto = require('crypto');
 const database = require('./database');
