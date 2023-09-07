@@ -3,6 +3,12 @@ const {getUserProfileCache} = require("../utils/malody");
 const router = express.Router();
 const {renderDefaultCard} = require("../cards/default");
 
+// Redirect to github
+router.get('/', function (req, res, next) {
+    res.redirect('https://github.com/vvbbnn00/malody-stats-card');
+});
+
+// Get user profile
 router.get('/profile', async function (req, res, next) {
     const uid = req.query.uid;
     if (!/[0-9]+/.test(uid)) {
@@ -28,6 +34,7 @@ router.get('/profile', async function (req, res, next) {
     }
 });
 
+// Get user profile card
 router.get('/card/default/:uid', async function (req, res, next) {
     const uid = req.params.uid;
 
