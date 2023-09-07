@@ -10,7 +10,7 @@ RUN addgroup --system --gid 1001 nodejs
 
 COPY . .
 RUN chown -R nodejs:nodejs /app
-RUN npm install --omit=dev
+RUN npm install
 
 USER nodejs
 
