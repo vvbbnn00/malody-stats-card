@@ -6,11 +6,11 @@
     "start": "node ./bin/www"
   },
   "dependencies": {
+    "@seald-io/nedb": "^4.1.2",
     "cookie-parser": "~1.4.7",
     "dotenv": "^16.3.1",
     "express": "~4.22.1",
     "morgan": "~1.10.1",
-    "nedb": "^1.8.0",
     "node-fetch": "^3.3.2",
     "tunnel": "^0.0.6"
   }

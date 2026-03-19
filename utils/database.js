@@ -1,8 +1,8 @@
-const nedb = require('nedb');
+const Datastore = require('@seald-io/nedb');
 const path = require('path');
 const {DB_PATH} = require('../global.config');
 
-const db = new nedb({
+const db = new Datastore({
     filename: path.join(__dirname, '..', DB_PATH),
     autoload: true,
 });
