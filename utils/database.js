@@ -1,80 +1,174 @@
 const Datastore = require('@seald-io/nedb');
+const fs = require('fs');
 const path = require('path');
 const {DB_PATH} = require('../global.config');
 
-const db = new Datastore({
-    filename: path.join(__dirname, '..', DB_PATH),
-    autoload: true,
-});
+const DEFAULT_PROVIDER = 'legacy';
+const SCHEMA_VERSION = 2;
 
-
-async function getCachedToken(uid) {
-    return await new Promise((resolve, reject) => {
-        db.findOne({uid, type: "token"}, (err, doc) => {
-            if (err) reject(err);
-            resolve(doc);
-        })
+function callDb(db, method, ...args) {
+    return new Promise((resolve, reject) => {
+        db[method](...args, (err, result) => {
+            if (err) {
+                reject(err);
+                return;
+            }
+            resolve(result);
+        });
     });
 }
 
+function toAbsoluteFilename(filename) {
+    if (!filename) return undefined;
+    if (path.isAbsolute(filename)) return filename;
+    return path.join(__dirname, '..', filename);
+}
 
-async function setCachedToken(uid, token) {
-    const doc = await getCachedToken(uid);
-    if (doc) {
-        await new Promise((resolve, reject) => {
-            db.update({uid, type: "token"}, {$set: {token}}, {}, (err, numReplaced) => {
-                if (err) reject(err);
-                resolve(numReplaced);
-            })
-        });
-    } else {
-        await new Promise((resolve, reject) => {
-            db.insert({uid, type: "token", token}, (err, doc) => {
-                if (err) reject(err);
-                resolve(doc);
-            })
-        });
+function createDatabaseStore(options = {}) {
+    const filename = toAbsoluteFilename(options.filename || DB_PATH);
+    const db = new Datastore({
+        filename,
+        inMemoryOnly: options.inMemoryOnly || false,
+        autoload: options.autoload !== false,
+    });
+
+    let initPromise;
+
+    async function findOne(query) {
+        return callDb(db, 'findOne', query);
     }
-}
 
+    async function find(query) {
+        return callDb(db, 'find', query);
+    }
 
-async function getCachedProfile(uid) {
-    return await new Promise((resolve, reject) => {
-        db.findOne({uid, type: "profile"}, (err, doc) => {
-            if (err) reject(err);
-            resolve(doc);
-        })
-    });
-}
+    async function update(query, updateDoc, updateOptions = {}) {
+        return callDb(db, 'update', query, updateDoc, updateOptions);
+    }
 
+    async function insert(doc) {
+        return callDb(db, 'insert', doc);
+    }
 
-async function setCachedProfile(uid, profile) {
-    const doc = await getCachedProfile(uid);
-    if (doc) {
-        await new Promise((resolve, reject) => {
-            db.update({uid, type: "profile"}, {
+    async function ensureBackupExists() {
+        if (options.inMemoryOnly || !filename || !fs.existsSync(filename)) return;
+
+        const backupFilename = `${filename}.bak-v1`;
+        if (fs.existsSync(backupFilename)) return;
+        fs.copyFileSync(filename, backupFilename);
+    }
+
+    async function setSchemaVersion(version) {
+        await update(
+            {type: 'meta', key: 'schemaVersion'},
+            {
                 $set: {
-                    profile,
-                    time: Date.now()
+                    type: 'meta',
+                    key: 'schemaVersion',
+                    value: version,
+                    updatedAt: Date.now()
                 }
-            }, {}, (err, numReplaced) => {
-                if (err) reject(err);
-                resolve(numReplaced);
-            })
-        });
-    } else {
-        await new Promise((resolve, reject) => {
-            db.insert({uid, type: "profile", profile, time: Date.now()}, (err, doc) => {
-                if (err) reject(err);
-                resolve(doc);
-            })
-        });
+            },
+            {upsert: true}
+        );
     }
+
+    async function migrateLegacyDocuments() {
+        const legacyDocs = await find({
+            type: {$in: ['token', 'profile']},
+            provider: {$exists: false}
+        });
+
+        if (legacyDocs.length === 0) {
+            await setSchemaVersion(SCHEMA_VERSION);
+            return;
+        }
+
+        await ensureBackupExists();
+
+        for (const doc of legacyDocs) {
+            await update({_id: doc._id}, {$set: {provider: DEFAULT_PROVIDER}});
+        }
+
+        await setSchemaVersion(SCHEMA_VERSION);
+    }
+
+    async function ensureInitialized() {
+        if (!initPromise) {
+            initPromise = (async () => {
+                const schemaVersionDoc = await findOne({type: 'meta', key: 'schemaVersion'});
+                const schemaVersion = schemaVersionDoc ? Number(schemaVersionDoc.value) : 1;
+
+                if (schemaVersion < SCHEMA_VERSION) {
+                    await migrateLegacyDocuments();
+                }
+            })();
+        }
+
+        await initPromise;
+    }
+
+    async function getCachedToken(uid, provider = DEFAULT_PROVIDER) {
+        await ensureInitialized();
+        return findOne({uid, type: 'token', provider});
+    }
+
+    async function setCachedToken(uid, token, provider = DEFAULT_PROVIDER) {
+        await ensureInitialized();
+        const doc = await getCachedToken(uid, provider);
+        if (doc) {
+            await update({uid, type: 'token', provider}, {$set: {token}});
+            return;
+        }
+
+        await insert({uid, type: 'token', provider, token});
+    }
+
+    async function getCachedProfile(uid, provider = DEFAULT_PROVIDER) {
+        await ensureInitialized();
+        return findOne({uid, type: 'profile', provider});
+    }
+
+    async function setCachedProfile(uid, profile, provider = DEFAULT_PROVIDER) {
+        await ensureInitialized();
+        const doc = await getCachedProfile(uid, provider);
+        const payload = {
+            profile,
+            time: Date.now()
+        };
+
+        if (doc) {
+            await update({uid, type: 'profile', provider}, {$set: payload});
+            return;
+        }
+
+        await insert({uid, type: 'profile', provider, ...payload});
+    }
+
+    return {
+        ensureInitialized,
+        getCachedToken,
+        setCachedToken,
+        getCachedProfile,
+        setCachedProfile,
+        _internal: {
+            db,
+            filename,
+            defaultProvider: DEFAULT_PROVIDER,
+            schemaVersion: SCHEMA_VERSION,
+            findOne,
+            find,
+        }
+    };
 }
+
+const defaultStore = createDatabaseStore();
 
 module.exports = {
-    getCachedToken,
-    setCachedToken,
-    getCachedProfile,
-    setCachedProfile
+    createDatabaseStore,
+    ensureInitialized: defaultStore.ensureInitialized,
+    getCachedToken: defaultStore.getCachedToken,
+    setCachedToken: defaultStore.setCachedToken,
+    getCachedProfile: defaultStore.getCachedProfile,
+    setCachedProfile: defaultStore.setCachedProfile
 };
