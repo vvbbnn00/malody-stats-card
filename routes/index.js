@@ -19,12 +19,11 @@ router.get('/profile', async function (req, res, next) {
         return;
     }
     try {
-        getUserProfileCache(uid).then(profile => {
-            res.send({
-                code: 0,
-                message: "ok",
-                data: profile
-            });
+        const profile = await getUserProfileCache(uid);
+        res.send({
+            code: 0,
+            message: "ok",
+            data: profile
         });
     } catch (e) {
         res.status(500).send({

@@ -1,7 +1,4 @@
-let fetch;
-(async () => {
-    fetch = (await import('node-fetch')).default;
-})();
+let fetchPromise;
 const tunnel = require('tunnel');
 const {PROXY, CACHE_TIME} = require('../global.config');
 const fs = require('fs');
@@ -18,7 +15,15 @@ const agent = PROXY && tunnel.httpsOverHttp({
     proxy: PROXY,
 });
 
+async function getFetch() {
+    if (!fetchPromise) {
+        fetchPromise = import('node-fetch').then(module => module.default);
+    }
+    return fetchPromise;
+}
+
 async function getOnlinePicture(url) {
+    const fetch = await getFetch();
     const sha256Hash = crypto.createHash('sha256');
     sha256Hash.update(url);
     const urlSha256 = sha256Hash.digest('hex');

@@ -1,7 +1,4 @@
-let fetch;
-(async () => {
-    fetch = (await import('node-fetch')).default;
-})();
+let fetchPromise;
 const tunnel = require('tunnel');
 const crypto = require('crypto');
 const database = require('./database');
@@ -15,6 +12,20 @@ const agent = PROXY && tunnel.httpsOverHttp({
     proxy: PROXY,
 });
 
+async function getFetch() {
+    if (!fetchPromise) {
+        fetchPromise = import('node-fetch').then(module => module.default);
+    }
+    return fetchPromise;
+}
+
+function assertMalodyCredentials() {
+    const missing = ['uid', 'username', 'password'].filter(field => !MALODY[field]);
+    if (missing.length) {
+        throw new Error(`Missing Malody credentials: ${missing.join(', ')}`);
+    }
+}
+
 
 /**
  * 获取登录Token
@@ -24,6 +35,7 @@ const agent = PROXY && tunnel.httpsOverHttp({
  * @returns {Promise<*>}
  */
 async function getLoginToken(username, password) {
+    const fetch = await getFetch();
     let md5Password = crypto.createHash('md5').update(password).digest('hex');
 
     let response = await fetch(LOGIN_URL, {
@@ -51,6 +63,7 @@ async function getLoginToken(username, password) {
  * @returns {Promise<*>}
  */
 async function checkLoginToken(token, uid) {
+    const fetch = await getFetch();
     let response = await fetch(CHECK_URL + `?key=${token}&uid=${uid}`, {
         method: "POST",
         headers: {
@@ -74,6 +87,7 @@ async function checkLoginToken(token, uid) {
  * @returns {Promise<*>}
  */
 async function getUserProfile(toUid, token, uid) {
+    const fetch = await getFetch();
     let response = await fetch(PROFILE_URL + `?lang=1&to_uid=${toUid}&t=${(Date.now() / 1000).toFixed(0)}&key=${token}&uid=${uid}`, {
         method: "GET",
         headers: {
@@ -97,6 +111,7 @@ async function getUserProfileCache(uid, retry = 0) {
             profile: profileCache.profile
         };
     }
+    assertMalodyCredentials();
     const fromUID = MALODY.uid;
     const cache = await database.getCachedToken(fromUID);
 
