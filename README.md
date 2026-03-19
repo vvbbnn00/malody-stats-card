@@ -150,7 +150,15 @@ You can usually obtain a UID by opening a player's profile page and copying the 
 
 The compose file in this repository is [`docker-compose.yaml`](docker-compose.yaml).
 The container reads credentials from `.env` at runtime, and the file is not copied into the image.
-Profile cache and image cache are persisted through the mounted `database/` and `cache/` directories.
+By default, profile cache and image cache are persisted with Docker named volumes, which avoids common Linux bind-mount permission issues while keeping the container on a non-root user.
+If you want to use host bind mounts instead, prepare the directories on the host before starting the container:
+
+```bash
+mkdir -p database cache
+sudo chown -R 100:101 database cache
+```
+
+The container runs as UID/GID `100:101`.
 
 ### Option B: Direct Execution
 

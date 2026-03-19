@@ -150,7 +150,15 @@ https://malody.mugzone.net/player/[UID]
 
 仓库中的 Compose 文件名是 [`docker-compose.yaml`](docker-compose.yaml)。
 容器会在运行时读取 `.env`，该文件不会被打进镜像。
-资料缓存和图片缓存会通过挂载的 `database/` 与 `cache/` 目录持久化。
+默认会使用 Docker named volume 来持久化资料缓存和图片缓存，这样可以在保持容器非 root 运行的同时避开 Linux 上常见的 bind mount 权限问题。
+如果你自行改成宿主机目录挂载，请先在宿主机上准备目录权限：
+
+```bash
+mkdir -p database cache
+sudo chown -R 100:101 database cache
+```
+
+容器内部运行用户的 UID/GID 固定为 `100:101`。
 
 ### 方式二：直接运行
 

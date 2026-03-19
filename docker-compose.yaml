@@ -11,5 +11,9 @@ services:
     ports:
       - "${PORT:-3000}:3000"
     volumes:
-      - ./database:/app/database
-      - ./cache:/app/cache
+      - malody-database:/app/database
+      - malody-cache:/app/cache
+
+volumes:
+  malody-database:
+  malody-cache:
