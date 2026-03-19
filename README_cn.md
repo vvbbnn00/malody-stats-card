@@ -1,115 +1,216 @@
-> **年轻人的第一款Malody状态卡片**
+> **Malody 玩家动画 SVG 状态卡片**
 
-# Malody Stats Card 使用说明文档
+# Malody Stats Card 使用说明
 
 中文 | [English](README.md)
 
-> **Warning**
+> **提示**
 >
-> 该项目是完全非官方、非盈利的开源项目，若该项目存在任何侵权、违规行为，请与我联系，谢谢！
+> 本项目为非官方、非盈利的开源项目。如有侵权或不合适的内容，请联系维护者处理。
 
+Malody Stats Card 可以把 Malody 玩家的资料渲染成一张可嵌入博客、主页或面板的动画 SVG 卡片。
 
-Malody Stats Card 提供了一个简易的方法来显示 Malody 用户的游戏数据卡片。你可以直接将其嵌入到你的博客、网站或其他需要的地方。
+当前支持两种数据提供方：
 
-## 示例
+- `legacy`：默认模式，使用旧版 Malody 社区接口，需要在 `.env` 中提供账号密码
+- `web-v2-experimental`：实验模式，使用新版 `malody.mugzone.net` 网页 API 的游客会话
 
-以下是一些使用 Malody Stats Card 的示例：
+> **动画说明**
+>
+> 卡片是动画 SVG。部分平台的缩略图或预览器只会截取第一帧，所以建议直接在浏览器中打开 SVG 来确认显示效果。
 
-### 默认卡片
+## 功能概览
 
-[![Malody Stats Card](https://malody-stat-card.bzpl.tech/card/default/178813)](http://m.mugzone.net/accounts/user/178813)
+- 动画 SVG 状态卡片
+- JSON 资料接口，便于联调和集成
+- 按 provider 隔离缓存，避免 `legacy` 和 `web-v2-experimental` 相互覆盖
+- 自动缓存 schema 迁移，并在首次迁移时创建备份
+- 已覆盖现有功能和实验功能的自动化测试
 
-### 自定义隐藏模式
+## 接口列表
 
-使用 `hide` 参数可以选择隐藏某些模式。例如，以下链接隐藏了4,5,8和9模式。
+| 用途 | Endpoint | 说明 |
+| --- | --- | --- |
+| 旧版资料 JSON | `/profile?uid=[UID]` | 默认 provider |
+| 旧版卡片 SVG | `/card/default/[UID]` | 动画 SVG |
+| 实验版资料 JSON | `/profile?uid=[UID]&provider=web-v2-experimental` | 新版网页 API 归一化后的结构 |
+| 实验版卡片 SVG | `/card/default/[UID]?provider=web-v2-experimental` | 仍使用当前卡片渲染器 |
+| 实验版资料快捷入口 | `/experimental/profile?uid=[UID]` | 等价于实验 provider |
+| 实验版卡片快捷入口 | `/experimental/card/default/[UID]` | 等价于实验 provider |
 
-[![Malody Stats Card](https://malody-stat-card.bzpl.tech/card/default/178813?hide=4,5,8,9)](http://m.mugzone.net/accounts/user/178813)
+## 查询参数
 
-## 使用方法
+| 参数 | 适用接口 | 说明 |
+| --- | --- | --- |
+| `uid` | `/profile`、`/experimental/profile` | Malody 用户 ID |
+| `hide` | 卡片接口 | 逗号分隔的模式列表，例如 `hide=4,5` |
+| `provider` | `/profile`、`/card/default/[UID]` | 当前支持 `legacy` 和 `web-v2-experimental` |
 
-想要在你的项目中使用 Malody Stats Card，你只需将下面的代码段嵌入到你的 Markdown 
-文件或 HTML 文件中，并替换 `[UID]` 为你想展示的用户 ID。关于获取用户`[UID]`的方法，
-请见[如何获取用户 UID](#如何获取用户-UID)。
+当前卡片渲染器会识别这些模式 ID：`0`、`3`、`4`、`5`、`6`、`7`、`8`、`9`。非法的 `hide` 参数会被自动忽略。
 
-### Markdown 代码
+## 响应头
 
-```markdown
-[![Malody Stats Card](https://malody-stat-card.bzpl.tech/card/default/[UID])](http://m.mugzone.net/accounts/user/[UID])
+| Header | 含义 |
+| --- | --- |
+| `X-Cache` | 卡片接口的缓存命中状态，值为 `HIT` 或 `MISS` |
+| `X-Malody-Provider` | 本次响应使用的数据提供方 |
+| `X-Malody-Experimental` | 实验接口会返回 `true` |
+
+## 本地测试 URL
+
+假设服务运行在 `http://127.0.0.1:3000`，可以直接测试这些地址：
+
+- 旧版资料 JSON：[http://127.0.0.1:3000/profile?uid=178813](http://127.0.0.1:3000/profile?uid=178813)
+- 旧版卡片 SVG：[http://127.0.0.1:3000/card/default/178813](http://127.0.0.1:3000/card/default/178813)
+- 旧版卡片隐藏部分模式：[http://127.0.0.1:3000/card/default/178813?hide=4,5,8,9](http://127.0.0.1:3000/card/default/178813?hide=4,5,8,9)
+- 实验版资料 JSON：[http://127.0.0.1:3000/profile?uid=178813&provider=web-v2-experimental](http://127.0.0.1:3000/profile?uid=178813&provider=web-v2-experimental)
+- 实验版资料快捷入口：[http://127.0.0.1:3000/experimental/profile?uid=178813](http://127.0.0.1:3000/experimental/profile?uid=178813)
+- 实验版卡片 SVG：[http://127.0.0.1:3000/experimental/card/default/178813](http://127.0.0.1:3000/experimental/card/default/178813)
+- 非法 provider 示例：[http://127.0.0.1:3000/profile?uid=178813&provider=future](http://127.0.0.1:3000/profile?uid=178813&provider=future)
+
+如果你想直接看响应头，可以使用：
+
+```bash
+curl -i "http://127.0.0.1:3000/card/default/178813"
+curl -i "http://127.0.0.1:3000/profile?uid=178813&provider=web-v2-experimental"
+curl -i "http://127.0.0.1:3000/experimental/card/default/178813"
 ```
 
-### HTML 代码
+## 嵌入方式
+
+请把 `https://your-host.example.com` 和 `[UID]` 替换成你自己的地址和用户 ID。
+
+### Markdown
+
+```markdown
+[![Malody Stats Card](https://your-host.example.com/card/default/[UID])](https://malody.mugzone.net/player/[UID])
+```
+
+### HTML
 
 ```html
-<a href="http://m.mugzone.net/accounts/user/[UID]">
-    <img src="https://malody-stat-card.bzpl.tech/card/default/[UID]" alt="Malody Stats Card">
+<a href="https://malody.mugzone.net/player/[UID]">
+    <img src="https://your-host.example.com/card/default/[UID]" alt="Malody Stats Card">
 </a>
 ```
 
-## 参数
+### 实验版 provider 示例
 
-目前支持以下参数：
-
-- `hide`: 选择隐藏的模式。例如 `hide=4,5` 会隐藏4和5模式的统计数据。
-
-若您想要设置参数，可以在链接后面加上 `?`，然后在 `?` 后面添加参数。例如：
-
-```text
-https://malody-stat-card.bzpl.tech/card/default/[UID]?hide=4,5
+```markdown
+[![Malody Stats Card](https://your-host.example.com/card/default/[UID]?provider=web-v2-experimental)](https://malody.mugzone.net/player/[UID])
 ```
 
-## 如何获取用户 UID
+## Provider 说明
 
-1. 访问Malody社区官网：[http://m.mugzone.net/index](http://m.mugzone.net/index)
-2. 点击右上角的登录按钮，登录你的账号。
-3. 登录成功后，点击右上角的头像，进入个人主页。
-4. 在个人主页的地址栏中，可以看到类似 `http://m.mugzone.net/accounts/user/xxxxx` 的地址，
-5. 其中的 `xxxxx` 就是你的 UID。
+### `legacy`
+
+- `/profile` 和 `/card/default/[UID]` 的默认行为
+- 使用旧版 Malody 接口
+- 必须在 `.env` 中提供账号密码
+- 更适合作为当前项目中的默认稳定方案
+
+### `web-v2-experimental`
+
+- 使用新版 `https://malody.mugzone.net/` 网页 API 的游客访问能力
+- 基础资料拉取不依赖账号密码
+- 返回结构会被归一化，保证现有卡片渲染器仍可使用
+- 明确标记为实验功能，上游一旦改版可能需要再次适配
+
+## 如何获取 UID
+
+当前公开玩家页的地址形式为：
+
+```text
+https://malody.mugzone.net/player/[UID]
+```
+
+打开玩家主页后，复制 URL 中的数字 ID 即可。
 
 ## 私有化部署
 
-> **Warning**
-> 
-> 查询用户时会模拟登录游戏，为了防止影响您的游戏体验，建议您在使用时新建一个专用的账号，不要使用自己的主账号。
+### 方式一：Docker Compose
 
-如果你想要在自己的服务器上部署 Malody Stats Card，你可以使用以下方法：
+1. 克隆本仓库。
+2. 如果要使用默认的 `legacy` provider，请在项目根目录创建 `.env`：
 
-### 使用 Docker-Copmose
+   ```env
+   uid=
+   username=
+   password=
+   PORT=3000
+   ```
 
-1. 克隆本仓库到你的服务器上。
-2. 在项目根目录下创建一个名为 `.env` 的文件，内容如下：
-    ```env
-    uid=
-    username=
-    password=
-    ```
-    其中，`uid` 为你的 Malody 用户 UID，`username` 和 `password` 为你的 Malody 用户名和密码。
-3. 在项目根目录下运行 `docker-compose up -d` 命令，等待部署完成。
-4. 访问 `http://localhost:3000/card/default/[UID]` ，其中 `localhost` 为你的服务器地址，`[UID]`
-为你的 Malody 用户 UID。
-5. 如果你想要修改端口号，可以在 `docker-compose.yml` 文件中修改 `ports` 参数。
-6. Enjoy it!
+3. 启动服务：
 
-### 直接运行
+   ```bash
+   docker compose up -d
+   ```
 
-1. 克隆本仓库到你的服务器上。
-2. 在项目根目录下创建一个名为 `.env` 的文件，内容如下：
-    ```env
-    uid=
-    username=
-    password=
-    ```
-    其中，`uid` 为你的 Malody 用户 UID，`username` 和 `password` 为你的 Malody 用户名和密码。
-3. 在项目根目录下运行 `npm install` 命令，等待依赖安装完成。
-4. 在项目根目录下运行 `npm run start` 命令，项目将会运行在 `http://localhost:3000` 上。
-5. 访问 `http://localhost:3000/card/default/[UID]` ，其中 `localhost` 为你的服务器地址，`[UID]`
-为你的 Malody 用户 UID。
-6. 若你想要修改端口号，可以在 `.env` 文件中新增 `PORT` 参数。
+4. 打开 `http://localhost:3000/card/default/[UID]`。
+
+仓库中的 Compose 文件名是 [`docker-compose.yaml`](docker-compose.yaml)。
+
+### 方式二：直接运行
+
+1. 克隆本仓库。
+2. 安装依赖：
+
+   ```bash
+   npm install
+   ```
+
+3. 如果要使用默认的 `legacy` provider，请创建 `.env`：
+
+   ```env
+   uid=
+   username=
+   password=
+   PORT=3000
+   ```
+
+   如果你只测试 `web-v2-experimental`，可以不填写 legacy 账号密码。
+
+4. 启动服务：
+
+   ```bash
+   npm run start
+   ```
+
+5. 打开 `http://localhost:3000/card/default/[UID]`。
+
+## 缓存、存储与迁移
+
+- 资料和 token 缓存存放在 `database/malody.db`
+- 图片缓存存放在 `cache/`
+- 数据存储带有 schema version
+- 从旧缓存结构首次迁移时，会自动生成 `database/malody.db.bak-v1`
+- 不同 provider 的缓存记录相互隔离，不会互相覆盖
+
+默认情况下，资料缓存和图片缓存的有效期都是 2 小时。
+
+## 测试
+
+运行自动化测试：
+
+```bash
+npm test
+```
+
+当前测试覆盖了：
+
+- 基础路由行为
+- 非法参数处理
+- 卡片接口缓存头
+- 实验 provider 路由分发
+- 新版网页 API 数据归一化
+- 数据库迁移与 provider 隔离
 
 ## 协议
-本项目使用 MIT 协议进行许可。你可以在 [LICENSE](LICENSE) 文件中找到更多信息。
+
+本项目基于 MIT License。详见 [LICENSE](LICENSE)。
 
 ## 致谢
-- [Malody](https://m.mugzone.net/)
+
+- [Malody](https://malody.mugzone.net/)
 - [flagicons](https://github.com/lipis/flag-icons)
 - [github-readme-stats](https://github.com/anuraghazra/github-readme-stats)
-- [ChatGPT](https://chat.openai.com)

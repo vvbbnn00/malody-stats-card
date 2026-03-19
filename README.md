@@ -1,110 +1,216 @@
-> **The First Malody Stats Card for Youngsters**
+> **Animated SVG stats cards for Malody profiles**
 
-# Malody Stats Card User Guide
+# Malody Stats Card
 
 [中文](README_cn.md) | English
 
 > **Warning**
 >
-> This project is entirely unofficial, non-profit, and open-source. If any infringement or violations are found in this project, please contact me. Thank you!
+> This project is unofficial, non-profit, and open source. If you believe any content here is infringing or inappropriate, please contact the maintainer.
 
-The Malody Stats Card offers a simple way to display a Malody user's game data card. You can directly embed it into your blog, website, or any other desired location.
+Malody Stats Card renders a Malody player's profile as an animated SVG card that can be embedded in blogs, profile pages, or dashboards.
 
-## Examples
+The project currently supports two data providers:
 
-Here are some examples of using the Malody Stats Card:
+- `legacy` (default): uses the older Malody community API and requires account credentials in `.env`
+- `web-v2-experimental`: uses the newer `malody.mugzone.net` web API through a guest session and is marked experimental
 
-### Default Card
+> **Animation note**
+>
+> Cards are animated SVGs. Some preview tools or social platforms may only show the first frame. For visual verification, open the SVG directly in a browser.
 
-[![Malody Stats Card](https://malody-stat-card.bzpl.tech/card/default/178813)](http://m.mugzone.net/accounts/user/178813)
+## Features
 
-### Custom Hide Mode
+- Animated SVG profile cards
+- JSON profile endpoints for integrations and debugging
+- Provider-based cache isolation between `legacy` and `web-v2-experimental`
+- Automatic cache schema migration with backup on first upgrade
+- Route and adapter tests for both existing and experimental behavior
 
-By using the `hide` parameter, you can choose to hide certain modes. For instance, the link below hides modes 4, 5, 8, and 9.
+## Endpoints
 
-[![Malody Stats Card](https://malody-stat-card.bzpl.tech/card/default/178813?hide=4,5,8,9)](http://m.mugzone.net/accounts/user/178813)
+| Purpose | Endpoint | Notes |
+| --- | --- | --- |
+| Legacy profile JSON | `/profile?uid=[UID]` | Default provider |
+| Legacy card SVG | `/card/default/[UID]` | Animated SVG |
+| Experimental profile JSON | `/profile?uid=[UID]&provider=web-v2-experimental` | Same shape as legacy, normalized from the new web API |
+| Experimental card SVG | `/card/default/[UID]?provider=web-v2-experimental` | Same card renderer, experimental data source |
+| Experimental profile JSON shortcut | `/experimental/profile?uid=[UID]` | Shortcut for the experimental provider |
+| Experimental card SVG shortcut | `/experimental/card/default/[UID]` | Shortcut for the experimental provider |
 
-## Usage
+## Query Parameters
 
-To use the Malody Stats Card in your project, just embed the code snippet below into your Markdown or HTML file, replacing `[UID]` with the user ID you wish to display. For guidance on obtaining the user's `[UID]`, see [How to Obtain User UID](#how-to-obtain-user-uid).
+| Name | Applies to | Description |
+| --- | --- | --- |
+| `uid` | `/profile`, `/experimental/profile` | Malody user ID |
+| `hide` | card endpoints | Comma-separated modes to hide, for example `hide=4,5` |
+| `provider` | `/profile`, `/card/default/[UID]` | Currently supports `legacy` and `web-v2-experimental` |
 
-### Markdown Code
+The card renderer currently recognizes these mode IDs when present: `0`, `3`, `4`, `5`, `6`, `7`, `8`, `9`. Invalid `hide` entries are ignored.
 
-```markdown
-[![Malody Stats Card](https://malody-stat-card.bzpl.tech/card/default/[UID])](http://m.mugzone.net/accounts/user/[UID])
+## Response Headers
+
+| Header | Meaning |
+| --- | --- |
+| `X-Cache` | `HIT` or `MISS` for card responses |
+| `X-Malody-Provider` | Which provider served the response |
+| `X-Malody-Experimental` | Present and set to `true` for experimental responses |
+
+## Local Sanity Checks
+
+Assuming the service is running at `http://127.0.0.1:3000`, these URLs are useful for quick manual checks:
+
+- Legacy profile JSON: [http://127.0.0.1:3000/profile?uid=178813](http://127.0.0.1:3000/profile?uid=178813)
+- Legacy card SVG: [http://127.0.0.1:3000/card/default/178813](http://127.0.0.1:3000/card/default/178813)
+- Legacy card with hidden modes: [http://127.0.0.1:3000/card/default/178813?hide=4,5,8,9](http://127.0.0.1:3000/card/default/178813?hide=4,5,8,9)
+- Experimental profile JSON: [http://127.0.0.1:3000/profile?uid=178813&provider=web-v2-experimental](http://127.0.0.1:3000/profile?uid=178813&provider=web-v2-experimental)
+- Experimental profile shortcut: [http://127.0.0.1:3000/experimental/profile?uid=178813](http://127.0.0.1:3000/experimental/profile?uid=178813)
+- Experimental card SVG: [http://127.0.0.1:3000/experimental/card/default/178813](http://127.0.0.1:3000/experimental/card/default/178813)
+- Invalid provider example: [http://127.0.0.1:3000/profile?uid=178813&provider=future](http://127.0.0.1:3000/profile?uid=178813&provider=future)
+
+If you want to inspect headers:
+
+```bash
+curl -i "http://127.0.0.1:3000/card/default/178813"
+curl -i "http://127.0.0.1:3000/profile?uid=178813&provider=web-v2-experimental"
+curl -i "http://127.0.0.1:3000/experimental/card/default/178813"
 ```
 
-### HTML Code
+## Embedding
+
+Replace `https://your-host.example.com` and `[UID]` with your own values.
+
+### Markdown
+
+```markdown
+[![Malody Stats Card](https://your-host.example.com/card/default/[UID])](https://malody.mugzone.net/player/[UID])
+```
+
+### HTML
 
 ```html
-<a href="http://m.mugzone.net/accounts/user/[UID]">
-    <img src="https://malody-stat-card.bzpl.tech/card/default/[UID]" alt="Malody Stats Card">
+<a href="https://malody.mugzone.net/player/[UID]">
+    <img src="https://your-host.example.com/card/default/[UID]" alt="Malody Stats Card">
 </a>
 ```
 
-## Parameters
+### Experimental Provider Example
 
-The following parameters are currently supported:
-
-- `hide`: Choose the modes to hide. For instance, `hide=4,5` will hide the statistics for modes 4 and 5.
-
-To set parameters, you can add a `?` to the end of the link, followed by the parameters. For example:
-
-```text
-https://malody-stat-card.bzpl.tech/card/default/[UID]?hide=4,5
+```markdown
+[![Malody Stats Card](https://your-host.example.com/card/default/[UID]?provider=web-v2-experimental)](https://malody.mugzone.net/player/[UID])
 ```
 
-## How to Obtain User UID
+## Provider Notes
 
-1. Visit the official Malody community site: [http://m.mugzone.net/index](http://m.mugzone.net/index)
-2. Click the login button in the top right corner to log into your account.
-3. Once logged in, click on your profile picture in the top right corner to enter your personal page.
-4. In the address bar of the personal page, you will see an address like `http://m.mugzone.net/accounts/user/xxxxx`.
-5. The `xxxxx` is your UID.
+### `legacy` provider
+
+- Default behavior for `/profile` and `/card/default/[UID]`
+- Uses the older Malody API endpoints
+- Requires `.env` credentials
+- Recommended when you want the most established behavior in this project
+
+### `web-v2-experimental` provider
+
+- Uses the newer `https://malody.mugzone.net/` web API through guest access
+- Does not require account credentials for basic profile fetches
+- Response shape is normalized so the current card renderer can keep working
+- Experimental by design and may break if the upstream site changes
+
+## How to Obtain a UID
+
+The current public player page is:
+
+```text
+https://malody.mugzone.net/player/[UID]
+```
+
+You can usually obtain a UID by opening a player's profile page and copying the numeric ID from the URL.
 
 ## Private Deployment
 
-> **Warning**
->
-> When querying a user, it will simulate game login. To prevent affecting your gaming experience, it's recommended that you create a dedicated account for this purpose and not use your main account.
+### Option A: Docker Compose
 
-If you want to deploy the Malody Stats Card on your own server, you can use the following methods:
+1. Clone this repository.
+2. If you want to use the default `legacy` provider, create a `.env` file in the project root:
 
-### Using Docker-Compose
+   ```env
+   uid=
+   username=
+   password=
+   PORT=3000
+   ```
 
-1. Clone this repository to your server.
-2. Create a `.env` file in the project root directory with the following content:
-    ```env
-    uid=
-    username=
-    password=
-    ```
-   Here, `uid` is your Malody user UID, and `username` and `password` are your Malody username and password.
-3. Run the command `docker-compose up -d` in the project root directory and wait for the deployment to finish.
-4. Visit `http://localhost:3000/card/default/[UID]`, where `localhost` is your server address and `[UID]` is your Malody user UID.
-5. If you wish to change the port number, modify the `ports` parameter in the `docker-compose.yml` file.
-6. Enjoy it!
+3. Start the service:
 
-### Direct Execution
+   ```bash
+   docker compose up -d
+   ```
 
-1. Clone this repository to your server.
-2. Create a `.env` file in the project root directory with the following content:
-    ```env
-    uid=
-    username=
-    password=
-    ```
-   Here, `uid` is your Malody user UID, and `username` and `password` are your Malody username and password.
-3. Run the command `npm install` in the project root directory and wait for the dependencies to install.
-4. Run the command `npm run start` in the project root directory. The project will run at `http://localhost:3000`.
-5. Visit `http://localhost:3000/card/default/[UID]`, where `localhost` is your server address and `[UID]` is your Malody user UID.
-6. If you wish to change the port number, add a `PORT` parameter to the `.env` file.
+4. Open `http://localhost:3000/card/default/[UID]`.
+
+The compose file in this repository is [`docker-compose.yaml`](docker-compose.yaml).
+
+### Option B: Direct Execution
+
+1. Clone this repository.
+2. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+3. If you want to use the default `legacy` provider, create `.env`:
+
+   ```env
+   uid=
+   username=
+   password=
+   PORT=3000
+   ```
+
+   If you only plan to test `web-v2-experimental`, the legacy credentials can be omitted.
+
+4. Start the service:
+
+   ```bash
+   npm run start
+   ```
+
+5. Open `http://localhost:3000/card/default/[UID]`.
+
+## Cache, Storage, and Migration
+
+- Profile and token cache are stored in `database/malody.db`
+- Downloaded images are cached in `cache/`
+- The datastore is schema-versioned
+- On the first migration from the old cache schema, the project creates `database/malody.db.bak-v1`
+- Cache records are isolated by provider so `legacy` and `web-v2-experimental` do not overwrite each other
+
+By default, cached profile and image data are reused for 2 hours.
+
+## Tests
+
+Run the automated test suite with:
+
+```bash
+npm test
+```
+
+Current tests cover:
+
+- Basic route behavior
+- Invalid parameter handling
+- Card route cache headers
+- Experimental provider routing
+- New web API normalization
+- Datastore migration and provider isolation
 
 ## License
-This project is licensed under the MIT License. More information can be found in the [LICENSE](LICENSE) file.
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
 
 ## Acknowledgements
-- [Malody](https://m.mugzone.net/)
+
+- [Malody](https://malody.mugzone.net/)
 - [flagicons](https://github.com/lipis/flag-icons)
 - [github-readme-stats](https://github.com/anuraghazra/github-readme-stats)
-- [ChatGPT](https://chat.openai.com)
