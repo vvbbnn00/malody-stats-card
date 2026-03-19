@@ -162,13 +162,21 @@ function createDatabaseStore(options = {}) {
     };
 }
 
-const defaultStore = createDatabaseStore();
+let defaultStore;
+
+function getDefaultStore() {
+    if (!defaultStore) {
+        defaultStore = createDatabaseStore();
+    }
+
+    return defaultStore;
+}
 
 module.exports = {
     createDatabaseStore,
-    ensureInitialized: defaultStore.ensureInitialized,
-    getCachedToken: defaultStore.getCachedToken,
-    setCachedToken: defaultStore.setCachedToken,
-    getCachedProfile: defaultStore.getCachedProfile,
-    setCachedProfile: defaultStore.setCachedProfile
+    ensureInitialized: (...args) => getDefaultStore().ensureInitialized(...args),
+    getCachedToken: (...args) => getDefaultStore().getCachedToken(...args),
+    setCachedToken: (...args) => getDefaultStore().setCachedToken(...args),
+    getCachedProfile: (...args) => getDefaultStore().getCachedProfile(...args),
+    setCachedProfile: (...args) => getDefaultStore().setCachedProfile(...args)
 };
