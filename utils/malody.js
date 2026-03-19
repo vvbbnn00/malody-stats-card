@@ -2,7 +2,14 @@ let fetchPromise;
 const tunnel = require('tunnel');
 const crypto = require('crypto');
 const database = require('./database');
+const {
+    getUserProfileCache: getExperimentalUserProfileCache,
+    WEB_V2_EXPERIMENTAL_PROVIDER
+} = require('./malody-web-v2');
 const {PROXY, MALODY, CACHE_TIME} = require('../global.config');
+
+const DEFAULT_PROVIDER = 'legacy';
+const SUPPORTED_PROVIDERS = [DEFAULT_PROVIDER, WEB_V2_EXPERIMENTAL_PROVIDER];
 
 const LOGIN_URL = "https://m.mugzone.net/cgi/login";
 const CHECK_URL = "https://m.mugzone.net/cgi/check";
@@ -101,10 +108,10 @@ async function getUserProfile(toUid, token, uid) {
 }
 
 
-async function getUserProfileCache(uid, retry = 0) {
+async function getLegacyUserProfileCache(uid, retry = 0) {
     if (retry > 3) throw new Error("Retry too many times");
 
-    let profileCache = await database.getCachedProfile(uid);
+    let profileCache = await database.getCachedProfile(uid, DEFAULT_PROVIDER);
     if (profileCache && Date.now() - profileCache.time < CACHE_TIME) {
         return {
             cached: true,
@@ -113,13 +120,13 @@ async function getUserProfileCache(uid, retry = 0) {
     }
     assertMalodyCredentials();
     const fromUID = MALODY.uid;
-    const cache = await database.getCachedToken(fromUID);
+    const cache = await database.getCachedToken(fromUID, DEFAULT_PROVIDER);
 
     if (!cache || retry) {
         const {key} = await getLoginToken(MALODY.username, MALODY.password);
-        database.setCachedToken(fromUID, key).catch(console.error);
+        database.setCachedToken(fromUID, key, DEFAULT_PROVIDER).catch(console.error);
         profileCache = await getUserProfile(uid, key, fromUID);
-        database.setCachedProfile(uid, profileCache).catch(console.error);
+        database.setCachedProfile(uid, profileCache, DEFAULT_PROVIDER).catch(console.error);
         return {
             cached: false,
             profile: profileCache
@@ -128,21 +135,40 @@ async function getUserProfileCache(uid, retry = 0) {
     const {token} = cache;
     try {
         profileCache = await getUserProfile(uid, token, fromUID);
-        database.setCachedProfile(uid, profileCache).catch(console.error);
+        database.setCachedProfile(uid, profileCache, DEFAULT_PROVIDER).catch(console.error);
         return {
             cached: false,
             profile: profileCache
         };
     } catch (e) {
         console.error(e);
-        return getUserProfileCache(uid, retry + 1);
+        return getLegacyUserProfileCache(uid, retry + 1);
     }
 }
 
+async function getUserProfileCache(uid, options = {}) {
+    if (typeof options === 'number') {
+        return getLegacyUserProfileCache(uid, options);
+    }
+
+    const provider = options.provider || DEFAULT_PROVIDER;
+    if (provider === DEFAULT_PROVIDER) {
+        return getLegacyUserProfileCache(uid, 0);
+    }
+    if (provider === WEB_V2_EXPERIMENTAL_PROVIDER) {
+        return getExperimentalUserProfileCache(uid);
+    }
+
+    throw new Error(`Unsupported provider: ${provider}`);
+}
 
 module.exports = {
+    DEFAULT_PROVIDER,
+    SUPPORTED_PROVIDERS,
+    WEB_V2_EXPERIMENTAL_PROVIDER,
     getLoginToken,
     checkLoginToken,
     getUserProfile,
+    getLegacyUserProfileCache,
     getUserProfileCache
 };
