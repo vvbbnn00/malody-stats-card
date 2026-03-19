@@ -149,6 +149,8 @@ https://malody.mugzone.net/player/[UID]
 4. 打开 `http://localhost:3000/card/default/[UID]`。
 
 仓库中的 Compose 文件名是 [`docker-compose.yaml`](docker-compose.yaml)。
+容器会在运行时读取 `.env`，该文件不会被打进镜像。
+资料缓存和图片缓存会通过挂载的 `database/` 与 `cache/` 目录持久化。
 
 ### 方式二：直接运行
 

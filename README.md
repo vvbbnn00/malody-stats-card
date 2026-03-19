@@ -149,6 +149,8 @@ You can usually obtain a UID by opening a player's profile page and copying the 
 4. Open `http://localhost:3000/card/default/[UID]`.
 
 The compose file in this repository is [`docker-compose.yaml`](docker-compose.yaml).
+The container reads credentials from `.env` at runtime, and the file is not copied into the image.
+Profile cache and image cache are persisted through the mounted `database/` and `cache/` directories.
 
 ### Option B: Direct Execution
 

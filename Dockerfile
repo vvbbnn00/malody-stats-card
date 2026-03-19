@@ -1,20 +1,21 @@
-FROM node:18-alpine AS base
+FROM node:22-alpine
 
-FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
+ENV NODE_ENV=production
+ENV PORT=3000
 
-RUN adduser -S nodejs
-RUN addgroup --system --gid 1001 nodejs
+RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev && npm cache clean --force
 
 COPY . .
-RUN chown -R nodejs:nodejs /app
-RUN npm install
+
+RUN mkdir -p cache database && chown -R nodejs:nodejs /app
 
 USER nodejs
 
 EXPOSE 3000
-ENV PORT 3000
 
 CMD ["node", "bin/www"]
