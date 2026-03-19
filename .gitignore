@@ -3,3 +3,5 @@ node_modules/
 .idea/
 cache/
 .env
+.playwright-*/
+output/*
