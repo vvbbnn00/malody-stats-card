@@ -2,7 +2,7 @@ const express = require('express');
 const path = require('path');
 const logger = require('morgan');
 
-const indexRouter = require('./routes/index');
+const {router: indexRouter} = require('./routes/index');
 
 const app = express();
 

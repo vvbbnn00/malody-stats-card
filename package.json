@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www"
+    "start": "node ./bin/www",
+    "test": "node --test"
   },
   "dependencies": {
     "@seald-io/nedb": "^4.1.2",
@@ -16,5 +17,8 @@
   },
   "overrides": {
     "qs": "^6.14.2"
+  },
+  "devDependencies": {
+    "supertest": "^7.1.0"
   }
 }
